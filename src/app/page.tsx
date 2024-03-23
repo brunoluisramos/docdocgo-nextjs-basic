@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { env } from "~/env";
 
 type Message = {
@@ -18,14 +19,10 @@ export default function HomePage() {
   const sendMessage = async () => {
     if (!apiUrl) return;
 
-    setChatHistory((prev) => [
-      ...prev,
-      { role: "user", content: message },
-    ]);
+    setChatHistory((prev) => [...prev, { role: "user", content: message }]);
     setMessage(""); // Clear input field
 
     try {
-      console.log(chatHistory)
       const response = await fetch(`${apiUrl}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,22 +67,20 @@ export default function HomePage() {
             </button>
           </div>
         )}
-        <div className="chatBox mt-4 h-64 w-full max-w-2xl overflow-y-auto p-4">
+        <div className="chatBox mt-4 h-64 w-full max-w-4xl overflow-y-auto p-4">
           {chatHistory.map((chat, index) => (
             <div
               key={`chat-msg-${index}`}
               className={`${chat.role === "user" ? "text-right" : "text-left"} mb-2`}
             >
-              <span
-                className={`font-bold mr-2`}
-              >
+              <span className={`mr-2 font-bold`}>
                 {chat.role === "user" ? "You:" : "Bot:"}
               </span>
-              {chat.content}
+              <ReactMarkdown>{chat.content}</ReactMarkdown>
             </div>
           ))}
         </div>
-        <div className="mt-4 flex w-full max-w-2xl">
+        <div className="mt-4 flex w-full max-w-4xl">
           <input
             type="text"
             placeholder="Type your message here..."
