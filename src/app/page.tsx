@@ -12,9 +12,8 @@ export default function HomePage() {
   const startChat = () => {
     setHasStartedChat(true);
   };
-
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-slate-900 leading-relaxed text-slate-400 antialiased selection:bg-teal-300 selection:text-teal-900">
+    <main className="flex h-screen flex-col items-center justify-center bg-slate-900 leading-relaxed text-slate-400 antialiased selection:bg-teal-300 selection:text-teal-900 p-4 md:p-8 ">
       {!hasStartedChat ? (
         <TitlePage
           startChat={startChat}
