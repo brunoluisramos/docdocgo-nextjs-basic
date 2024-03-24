@@ -3,6 +3,7 @@ import { fontFamily } from "tailwindcss/defaultTheme";
 
 export default {
   content: ["./src/**/*.tsx"],
+  darkMode: "class",
   theme: {
     extend: {
       fontFamily: {
@@ -10,7 +11,5 @@ export default {
       },
     },
   },
-  plugins: [
-    require("tailwind-scrollbar"),
-  ],
+  plugins: [require("tailwind-scrollbar"), require("@tailwindcss/typography")],
 } satisfies Config;
