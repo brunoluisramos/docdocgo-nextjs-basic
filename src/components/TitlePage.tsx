@@ -8,13 +8,13 @@ interface TitlePageProps {
 
 const TitlePage = ({ apiUrl, setApiUrl, startChat }: TitlePageProps) => {
   return (
-    <div className="max-w-2xl text-center">
+    <div className="max-w-2xl text-center pb-12">
       <h1 className="mb-12 text-4xl font-bold text-slate-300 sm:text-5xl">
         Doc<span className=" text-pink-600">Doc</span>Go Test Interface
       </h1>
       <div className="w-full">
         <div className="mb-2 text-left text-sm font-semibold text-slate-300">
-          Your Flask API URL
+          DocDocGo API URL
         </div>
         <input
           type="text"
