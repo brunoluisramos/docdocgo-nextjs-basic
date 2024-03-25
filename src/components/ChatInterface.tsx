@@ -1,5 +1,5 @@
 // components/ChatInterface.tsx
-import React, { useState } from "react";
+import React, { use, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { env } from "~/env";
 import type { Message } from "~/types";
@@ -29,6 +29,12 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
     name: "",
     user_facing_name: "default",
   });
+  const lastChatRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    console.log("ChatInterface mounted");
+    lastChatRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory, error]);
 
   const sendMessage = async () => {
     const newMessage: Message = { role: "user", content: message };
@@ -72,7 +78,11 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
     <div className="flex h-full w-full max-w-4xl flex-col items-center justify-center gap-4">
       <div className="chatBox scrollbar-thumb-rounded-full flex h-full w-full flex-col overflow-y-auto overflow-x-hidden rounded-lg px-4 scrollbar scrollbar-track-transparent scrollbar-thumb-slate-700 ">
         {chatHistory.map((chat, index) => (
-          <div key={index} className={`mb-8`}>
+          <div
+            key={`chatmsg-${index}`}
+            ref={index === chatHistory.length - 1 ? lastChatRef : null}
+            className={"mb-8"}
+          >
             <div className="font-bold text-pink-600 ">
               {chat.role === "user" ? "You:" : "DDG:"}
             </div>
@@ -83,7 +93,7 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
           </div>
         ))}
         {error && (
-          <div className="mb-8 rounded-lg border border-pink-600 p-2">
+          <div ref={lastChatRef} className="mb-8 rounded-lg border border-pink-600 p-2">
             <ReactMarkdown className="prose prose-pink prose-invert">
               {error}
             </ReactMarkdown>
@@ -105,7 +115,7 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
           onKeyPress={(e) => e.key === "Enter" && !isLoading && sendMessage()}
         />
         <button
-          className={`ml-2 rounded-full ${isLoading ? "bg-neutral-500" : "bg-pink-700"} px-8 py-3 font-bold text-white transition hover ${isLoading ? "bg-neutral-500" : "bg-pink-800"}`}
+          className={`ml-2 rounded-full ${isLoading ? "bg-neutral-500" : "bg-pink-700"} hover px-8 py-3 font-bold text-white transition ${isLoading ? "bg-neutral-500" : "bg-pink-800"}`}
           onClick={sendMessage}
           disabled={isLoading}
         >
