@@ -99,7 +99,10 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
           </div>
         ))}
         {error && (
-          <div ref={lastChatRef} className="mb-8 rounded-lg border border-pink-600 p-2">
+          <div
+            ref={lastChatRef}
+            className="mb-8 rounded-lg border border-pink-600 p-2"
+          >
             <ReactMarkdown className="prose prose-pink prose-invert">
               {error}
             </ReactMarkdown>
@@ -121,7 +124,7 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
           onKeyPress={(e) => e.key === "Enter" && !isLoading && sendMessage()}
         />
         <button
-          className={`ml-2 rounded-full ${isLoading ? "bg-neutral-500" : "bg-pink-700"} hover px-8 py-3 font-bold text-white transition ${isLoading ? "bg-neutral-500" : "bg-pink-800"}`}
+          className={`ml-2 rounded-full ${isLoading ? "bg-neutral-500" : "bg-pink-700"} px-8 py-3 font-bold text-white transition hover:${isLoading ? "bg-neutral-500" : "bg-pink-800"}`}
           onClick={sendMessage}
           disabled={isLoading}
         >

@@ -9,7 +9,7 @@ interface TitlePageProps {
 const TitlePage = ({ apiUrl, setApiUrl, startChat }: TitlePageProps) => {
   return (
     <div className="max-w-2xl text-center pb-12">
-      <h1 className="mb-12 text-4xl font-bold text-slate-300 sm:text-5xl">
+      <h1 className="mb-12 text-4xl font-bold text-slate-300 sm:text-5xl animate-slide-up-fade">
         Doc<span className=" text-pink-600">Doc</span>Go Test Interface
       </h1>
       <div className="w-full">
