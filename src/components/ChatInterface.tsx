@@ -1,5 +1,5 @@
 // components/ChatInterface.tsx
-import React, { use, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { env } from "~/env";
 import type { Message } from "~/types";
@@ -13,6 +13,12 @@ interface RequestBody {
   api_key: string;
   chat_history: Message[];
   collection_name?: string;
+}
+
+interface APIResponse {
+  content: string;
+  collection_name: string;
+  user_facing_collection_name: string;
 }
 
 interface CollectionInfo {
@@ -55,7 +61,7 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
-      const data = await response.json();
+      const data = await response.json() as APIResponse;
 
       setChatHistory((prev) => [
         ...prev,
@@ -68,7 +74,7 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
       });
     } catch (error) {
       console.error("Error getting response:", error);
-      const msg = error instanceof Error ? error.message : `${error}`;
+      const msg = error instanceof Error ? error.message : String(error);
       setError(`Error getting response:\n\`\`\`\n${msg}\n\`\`\``);
     }
     setIsLoading(false);
