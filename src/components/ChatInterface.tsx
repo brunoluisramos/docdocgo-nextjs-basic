@@ -121,7 +121,7 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           disabled={isLoading}
-          onKeyPress={(e) => e.key === "Enter" && !isLoading && sendMessage()}
+          onKeyDown={(e) => e.key === "Enter" && !isLoading && sendMessage()}
         />
         <button
           className={`ml-2 rounded-full ${isLoading ? "bg-neutral-500" : "bg-pink-700"} px-8 py-3 font-bold text-white transition hover:${isLoading ? "bg-neutral-500" : "bg-pink-800"}`}
