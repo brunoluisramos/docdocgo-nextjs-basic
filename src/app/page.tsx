@@ -5,7 +5,7 @@ import TitlePage from "../components/TitlePage";
 import ChatInterface from "../components/ChatInterface";
 
 export default function HomePage() {
-  const [apiUrl, setApiUrl] = useState<string>("http://localhost:5000");
+  const [apiUrl, setApiUrl] = useState<string>("http://localhost:8000");
   const [hasStartedChat, setHasStartedChat] = useState<boolean>(false);
 
   // Function to start the chat, passed down to TitlePage

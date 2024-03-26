@@ -17,8 +17,8 @@ interface RequestBody {
 
 interface APIResponse {
   content: string;
-  collection_name: string;
-  user_facing_collection_name: string;
+  collection_name?: string;
+  user_facing_collection_name?: string;
 }
 
 interface CollectionInfo {
@@ -61,17 +61,33 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
-      const data = await response.json() as APIResponse;
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error, status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData && errorData.message) {
+            errorMessage += `\n${errorData.message}`;
+          }
+        } catch (error) {
+          console.error("Error parsing error response:", error);
+        }
+        throw new Error(errorMessage);
+      }
+      
+      const data = (await response.json()) as APIResponse;
 
       setChatHistory((prev) => [
         ...prev,
         { role: "assistant", content: data.content },
       ]);
 
-      setCollection({
-        name: data.collection_name,
-        user_facing_name: data.user_facing_collection_name,
-      });
+      if (data.collection_name && data.user_facing_collection_name) {
+        setCollection({
+          name: data.collection_name,
+          user_facing_name: data.user_facing_collection_name,
+        });
+      }
     } catch (error) {
       console.error("Error getting response:", error);
       const msg = error instanceof Error ? error.message : String(error);
