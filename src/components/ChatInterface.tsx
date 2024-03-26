@@ -65,8 +65,8 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
       if (!response.ok) {
         let errorMessage = `HTTP error, status: ${response.status}`;
         try {
-          const errorData = await response.json();
-          if (errorData && errorData.message) {
+          const errorData = (await response.json()) as { message?: string };
+          if (errorData?.message) {
             errorMessage += `\n${errorData.message}`;
           }
         } catch (error) {
@@ -74,7 +74,7 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
         }
         throw new Error(errorMessage);
       }
-      
+
       const data = (await response.json()) as APIResponse;
 
       setChatHistory((prev) => [
