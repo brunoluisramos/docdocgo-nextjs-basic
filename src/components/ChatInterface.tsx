@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { env } from "~/env";
-import type { Message } from "~/types";
+import type { Message, FullMessage } from "~/types";
 
 interface ChatInterfaceProps {
   apiUrl: string;
@@ -19,6 +19,7 @@ interface APIResponse {
   content: string;
   collection_name?: string;
   user_facing_collection_name?: string;
+  sources?: string[];
 }
 
 interface CollectionInfo {
@@ -26,9 +27,13 @@ interface CollectionInfo {
   user_facing_name: string;
 }
 
+function getChatHistoryForAPI(fullMessages: FullMessage[]): Message[] {
+  return fullMessages.map(({ role, content }) => ({ role, content }));
+}
+
 const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
   const [message, setMessage] = useState<string>("");
-  const [chatHistory, setChatHistory] = useState<Message[]>([]);
+  const [chatHistory, setChatHistory] = useState<FullMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [collection, setCollection] = useState<CollectionInfo>({
@@ -43,7 +48,7 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
   }, [chatHistory, error]);
 
   const sendMessage = async () => {
-    const newMessage: Message = { role: "user", content: message };
+    const newMessage: FullMessage = { role: "user", content: message };
     setIsLoading(true);
     setError(null);
     setChatHistory((prev) => [...prev, newMessage]);
@@ -52,7 +57,7 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
     const requestBody: RequestBody = {
       message,
       api_key: env.NEXT_PUBLIC_DOCDOCGO_API_KEY,
-      chat_history: chatHistory,
+      chat_history: getChatHistoryForAPI(chatHistory),
       collection_name: collection.name,
     };
     try {
@@ -76,11 +81,15 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
       }
 
       const data = (await response.json()) as APIResponse;
+      const botMessage: FullMessage = {
+        role: "assistant",
+        content: data.content,
+      };
+      if (data.sources) {
+        botMessage.sources = data.sources;
+      }
 
-      setChatHistory((prev) => [
-        ...prev,
-        { role: "assistant", content: data.content },
-      ]);
+      setChatHistory((prev) => [...prev, botMessage]);
 
       if (data.collection_name && data.user_facing_collection_name) {
         setCollection({
@@ -112,6 +121,11 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
             <ReactMarkdown className="prose prose-pink prose-invert">
               {chat.content}
             </ReactMarkdown>
+            {chat.sources && (
+              <ReactMarkdown className="prose prose-pink prose-invert mt-4">
+                {`#### Sources:\n- ${chat.sources.join("- ")}`}
+              </ReactMarkdown>
+            )}
           </div>
         ))}
         {error && (
