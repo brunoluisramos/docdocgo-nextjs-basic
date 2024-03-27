@@ -1,16 +1,18 @@
 // components/ChatInterface.tsx
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { env } from "~/env";
 import type { Message, FullMessage } from "~/types";
 
 interface ChatInterfaceProps {
   apiUrl: string;
+  apiKey: string;
+  openaiApiKey?: string;
 }
 
 interface RequestBody {
   message: string;
   api_key: string;
+  openai_api_key?: string;
   chat_history: Message[];
   collection_name?: string;
 }
@@ -31,7 +33,11 @@ function getChatHistoryForAPI(fullMessages: FullMessage[]): Message[] {
   return fullMessages.map(({ role, content }) => ({ role, content }));
 }
 
-const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
+const ChatInterface = ({
+  apiUrl,
+  apiKey,
+  openaiApiKey,
+}: ChatInterfaceProps) => {
   const [message, setMessage] = useState<string>("");
   const [chatHistory, setChatHistory] = useState<FullMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -56,7 +62,8 @@ const ChatInterface = ({ apiUrl }: ChatInterfaceProps) => {
 
     const requestBody: RequestBody = {
       message,
-      api_key: env.NEXT_PUBLIC_DOCDOCGO_API_KEY,
+      api_key: apiKey,
+      openai_api_key: openaiApiKey,
       chat_history: getChatHistoryForAPI(chatHistory),
       collection_name: collection.name,
     };
