@@ -174,7 +174,7 @@ const ChatInterface = ({
             </ReactMarkdown>
             {chat.sources && (
               <ReactMarkdown className="prose prose-pink prose-invert mt-4">
-                {`#### Sources:\n- ${chat.sources.join("- ")}`}
+                {`#### Sources:\n- ${chat.sources.join("\n- ")}`}
               </ReactMarkdown>
             )}
           </div>
