@@ -1,5 +1,5 @@
 // components/ChatInterface.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, FullMessage } from "~/types";
 
@@ -38,6 +38,8 @@ const ChatInterface = ({
   apiKey,
   openaiApiKey,
 }: ChatInterfaceProps) => {
+  apiUrl = apiUrl.replace(/\/$/, ""); // remove trailing slash if present
+
   const [message, setMessage] = useState<string>("");
   const [chatHistory, setChatHistory] = useState<FullMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -53,12 +55,10 @@ const ChatInterface = ({
     lastChatRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory, error]);
 
+  // Send a regular chat message
   const sendMessage = async () => {
     const newMessage: FullMessage = { role: "user", content: message };
-    setIsLoading(true);
-    setError(null);
     setChatHistory((prev) => [...prev, newMessage]);
-    setMessage(""); // clear input field
 
     const requestBody: RequestBody = {
       message,
@@ -67,11 +67,55 @@ const ChatInterface = ({
       chat_history: getChatHistoryForAPI(chatHistory),
       collection_name: collection.name,
     };
+    const payload = JSON.stringify(requestBody);
+    await sendRequest(payload, "/chat");
+  };
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const newMessage: FullMessage = { role: "user", content: message };
+    setChatHistory((prev) => [...prev, newMessage]);
+
+    // Assert that event.target is a form element
+    const form = event.target as HTMLFormElement;
+    const formData = new FormData(form);
+
+    console.log("message", typeof message, message);
+    const dataToAdd: RequestBody = {
+      message,
+      api_key: apiKey,
+      openai_api_key: openaiApiKey,
+      chat_history: getChatHistoryForAPI(chatHistory),
+      collection_name: collection.name,
+    };
+
+    // Add fields to FormData
+    for (const [key, value] of Object.entries(dataToAdd)) {
+      if (value === undefined) continue;
+
+      // JSON.stringify, even if it's a string. This introduces extra quotes, so
+      // we need to json.loads on the Python side even if it's a string. We do this,
+      // in particular, because apparently having any of the values as an empty string
+      // causes a 422 error on the Python side.
+      formData.append(key, JSON.stringify(value));
+    }
+
+    await sendRequest(formData, "/ingest");
+  }
+
+  const sendRequest = async (payload: string | FormData, endPoint: string) => {
+    setIsLoading(true);
+    setError(null);
+    setMessage(""); // clear input field
+
+    const isJsonPayload = typeof payload === "string";
+
     try {
-      const response = await fetch(`${apiUrl}/chat`, {
+      const response = await fetch(`${apiUrl}${endPoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        headers: isJsonPayload ? { "Content-Type": "application/json" } : {},
+        body: payload,
       });
 
       if (!response.ok) {
@@ -168,6 +212,10 @@ const ChatInterface = ({
           Send
         </button>
       </div>
+      <form onSubmit={handleSubmit} encType="multipart/form-data">
+        <input type="file" name="files" multiple />
+        <button type="submit">Upload</button>
+      </form>
     </div>
   );
 };
