@@ -1,7 +1,10 @@
 // components/ChatInterface.tsx
+import { cn } from "~/lib/utils";
 import React, { useEffect, useRef, useState, FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, FullMessage } from "~/types";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 
 interface ChatInterfaceProps {
   apiUrl: string;
@@ -49,6 +52,7 @@ const ChatInterface = ({
     user_facing_name: "default",
   });
   const lastChatRef = useRef<HTMLDivElement | null>(null);
+  const uploaderRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     console.log("ChatInterface mounted");
@@ -71,15 +75,23 @@ const ChatInterface = ({
     await sendRequest(payload, "/chat");
   };
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSubmit() {
+    // Check if the user has selected any files
+    const fileCount = uploaderRef.current?.files?.length;
+    if (!fileCount) {
+      // Send regular chat message, in JSON format
+      return await sendMessage();
+    }
 
-    const newMessage: FullMessage = { role: "user", content: message };
-    setChatHistory((prev) => [...prev, newMessage]);
+    // Add files to FormData
+    const formData = new FormData();
+    for (let i = 0; i < fileCount; i++) {
+      const file = uploaderRef.current?.files?.[i];
+      if (file) formData.append("files", file);
+    }
 
-    // Assert that event.target is a form element
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
+     const newMessage: FullMessage = { role: "user", content: message };
+     setChatHistory((prev) => [...prev, newMessage]);
 
     console.log("message", typeof message, message);
     const dataToAdd: RequestBody = {
@@ -102,6 +114,9 @@ const ChatInterface = ({
     }
 
     await sendRequest(formData, "/ingest");
+
+    // Clear the selected files
+    uploaderRef.current!.value = "";
   }
 
   const sendRequest = async (payload: string | FormData, endPoint: string) => {
@@ -158,7 +173,7 @@ const ChatInterface = ({
 
   return (
     <div className="flex h-full w-full max-w-4xl flex-col items-center justify-center gap-4">
-      <div className="chatBox scrollbar-thumb-rounded-full flex h-full w-full flex-col overflow-y-auto overflow-x-hidden rounded-lg px-4 scrollbar scrollbar-track-transparent scrollbar-thumb-slate-700 ">
+      <div className="chatBox scrollbar-thumb-rounded-full scrollbar scrollbar-track-transparent scrollbar-thumb-slate-700 flex h-full w-full flex-col overflow-y-auto overflow-x-hidden rounded-lg px-4 ">
         {chatHistory.map((chat, index) => (
           <div
             key={`chatmsg-${index}`}
@@ -202,20 +217,30 @@ const ChatInterface = ({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           disabled={isLoading}
-          onKeyDown={(e) => e.key === "Enter" && !isLoading && sendMessage()}
+          onKeyDown={(e) => e.key === "Enter" && !isLoading && handleSubmit()}
         />
         <button
           className={`ml-2 rounded-full ${isLoading ? "bg-neutral-500" : "bg-pink-700"} px-8 py-3 font-bold text-white transition hover:${isLoading ? "bg-neutral-500" : "bg-pink-800"}`}
-          onClick={sendMessage}
+          onClick={handleSubmit}
           disabled={isLoading}
         >
           Send
         </button>
       </div>
-      <form onSubmit={handleSubmit} encType="multipart/form-data">
-        <input type="file" name="files" multiple />
-        <button type="submit">Upload</button>
-      </form>
+
+      <div className="flex w-full">
+        <Label htmlFor="uploader" hidden>
+          Upload your documents
+        </Label>
+        <Input
+          id="uploader"
+          type="file"
+          name="files"
+          className="w-auto cursor-pointer"
+          multiple
+          ref={uploaderRef}
+        />
+      </div>
     </div>
   );
 };
