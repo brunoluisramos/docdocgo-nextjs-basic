@@ -17,7 +17,7 @@ interface RequestData {
   chat_history: Message[];
   openai_api_key?: string;
   collection_name?: string;
-  access_codes_cache: Record<string, string>;
+  access_codes_cache?: Record<string, string>;
 }
 
 const InstructionType = {
@@ -112,10 +112,10 @@ const ChatInterface = ({
       openai_api_key: openaiApiKey,
       chat_history: getChatHistoryForAPI(chatHistory),
       collection_name: collection.name,
-      access_codes_cache: accessCodesRef.current[userId ?? ""] ?? {},
+      access_codes_cache: accessCodesRef.current[userId ?? ""],
     };
 
-    // Check if the user has selected any files
+    // Check if the user has selected any files. If not, send request to /chat
     const fileCount = uploaderRef.current?.files?.length;
     if (!fileCount) {
       // Send regular chat message, in JSON format
@@ -130,7 +130,7 @@ const ChatInterface = ({
       if (file) formData.append("files", file);
     }
 
-    // Add fields to FormData
+    // Add fields to FormData and send request to /ingest
     for (const [key, value] of Object.entries(requestData)) {
       if (value === undefined) continue;
 
