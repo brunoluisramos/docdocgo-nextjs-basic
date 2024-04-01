@@ -1,6 +1,5 @@
 // components/ChatInterface.tsx
-import { cn } from "~/lib/utils";
-import React, { useEffect, useRef, useState, FormEvent } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, FullMessage } from "~/types";
 import { Input } from "~/components/ui/input";
@@ -12,19 +11,32 @@ interface ChatInterfaceProps {
   openaiApiKey?: string;
 }
 
-interface RequestBody {
+interface RequestData {
   message: string;
   api_key: string;
-  openai_api_key?: string;
   chat_history: Message[];
+  openai_api_key?: string;
   collection_name?: string;
+  access_codes_cache: Record<string, string>;
+}
+
+const InstructionType = {
+  INSTRUCT_SHOW_UPLOADER: "INSTRUCT_SHOW_UPLOADER",
+  INSTRUCT_CACHE_ACCESS_CODE: "INSTRUCT_CACHE_ACCESS_CODE",
+} as const;
+
+interface Instruction {
+  type: (typeof InstructionType)[keyof typeof InstructionType];
+  user_id: string | null;
+  access_code: string | null;
 }
 
 interface APIResponse {
   content: string;
-  collection_name?: string;
-  user_facing_collection_name?: string;
-  sources?: string[];
+  collection_name: string | null;
+  user_facing_collection_name: string | null;
+  sources: string[] | null;
+  instruction: Instruction | null;
 }
 
 interface CollectionInfo {
@@ -32,8 +44,15 @@ interface CollectionInfo {
   user_facing_name: string;
 }
 
+type UserId = string | null;
+
 function getChatHistoryForAPI(fullMessages: FullMessage[]): Message[] {
   return fullMessages.map(({ role, content }) => ({ role, content }));
+}
+
+const PRIVATE_COLLECTION_USER_ID_LENGTH = 6; // same as in the Python code
+function getUserId(openai_api_key: string | undefined): UserId {
+  return openai_api_key?.slice(-PRIVATE_COLLECTION_USER_ID_LENGTH) ?? null;
 }
 
 const ChatInterface = ({
@@ -53,34 +72,55 @@ const ChatInterface = ({
   });
   const lastChatRef = useRef<HTMLDivElement | null>(null);
   const uploaderRef = useRef<HTMLInputElement | null>(null);
+  const accessCodesRef = useRef<Record<string, Record<string, string>>>({});
+  // NOTE: keys are `${collection_name} ${user_id}, values are access_code
+
+  function getAccessCode(collectionName: string, userId: UserId) {
+    const collectionNameToCode = accessCodesRef.current[userId ?? ""] ?? {};
+    return collectionNameToCode[collectionName];
+  }
+  function setAccessCode(
+    collectionName: string,
+    userId: UserId,
+    accessCode: string,
+  ) {
+    console.log("Caching access code:", collectionName, userId, accessCode);
+    const collectionNameToCode = accessCodesRef.current[userId ?? ""] 
+    if (collectionNameToCode) {
+      collectionNameToCode[collectionName] = accessCode;
+    } else {
+      accessCodesRef.current[userId ?? ""] = { [collectionName]: accessCode };
+    }
+  }
+
+  const userId = getUserId(openaiApiKey);
 
   useEffect(() => {
-    console.log("ChatInterface mounted");
     lastChatRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory, error]);
 
-  // Send a regular chat message
-  const sendMessage = async () => {
+  async function handleSubmit() {
     const newMessage: FullMessage = { role: "user", content: message };
     setChatHistory((prev) => [...prev, newMessage]);
+    setIsLoading(true);
+    setError(null);
+    setMessage(""); // clear input field
 
-    const requestBody: RequestBody = {
+    const requestData: RequestData = {
       message,
       api_key: apiKey,
       openai_api_key: openaiApiKey,
       chat_history: getChatHistoryForAPI(chatHistory),
       collection_name: collection.name,
+      access_codes_cache: accessCodesRef.current[userId ?? ""] ?? {},
     };
-    const payload = JSON.stringify(requestBody);
-    await sendRequest(payload, "/chat");
-  };
 
-  async function handleSubmit() {
     // Check if the user has selected any files
     const fileCount = uploaderRef.current?.files?.length;
     if (!fileCount) {
       // Send regular chat message, in JSON format
-      return await sendMessage();
+      const payload = JSON.stringify(requestData);
+      return await sendRequest(payload, "/chat");
     }
 
     // Add files to FormData
@@ -90,20 +130,8 @@ const ChatInterface = ({
       if (file) formData.append("files", file);
     }
 
-     const newMessage: FullMessage = { role: "user", content: message };
-     setChatHistory((prev) => [...prev, newMessage]);
-
-    console.log("message", typeof message, message);
-    const dataToAdd: RequestBody = {
-      message,
-      api_key: apiKey,
-      openai_api_key: openaiApiKey,
-      chat_history: getChatHistoryForAPI(chatHistory),
-      collection_name: collection.name,
-    };
-
     // Add fields to FormData
-    for (const [key, value] of Object.entries(dataToAdd)) {
+    for (const [key, value] of Object.entries(requestData)) {
       if (value === undefined) continue;
 
       // JSON.stringify, even if it's a string. This introduces extra quotes, so
@@ -120,11 +148,8 @@ const ChatInterface = ({
   }
 
   const sendRequest = async (payload: string | FormData, endPoint: string) => {
-    setIsLoading(true);
-    setError(null);
-    setMessage(""); // clear input field
-
     const isJsonPayload = typeof payload === "string";
+    console.log("Sending request to", endPoint, "with payload:\n", payload);
 
     try {
       const response = await fetch(`${apiUrl}${endPoint}`, {
@@ -147,6 +172,8 @@ const ChatInterface = ({
       }
 
       const data = (await response.json()) as APIResponse;
+      console.log("API Response data:", data);
+
       const botMessage: FullMessage = {
         role: "assistant",
         content: data.content,
@@ -154,8 +181,18 @@ const ChatInterface = ({
       if (data.sources) {
         botMessage.sources = data.sources;
       }
-
       setChatHistory((prev) => [...prev, botMessage]);
+
+      if (data.instruction) {
+        const { type, user_id, access_code } = data.instruction; // from Python response
+        if (type === InstructionType.INSTRUCT_CACHE_ACCESS_CODE) {
+          // Cache the access code for this collection and user
+          setAccessCode(data.collection_name!, user_id, access_code!);
+        }
+        // The returned user_id should match userId (both constructed from openaiApiKey)
+        if (user_id !== userId)
+          setError(`User ID mismatch: ${user_id} !== ${userId}`);
+      }
 
       if (data.collection_name && data.user_facing_collection_name) {
         setCollection({
@@ -220,7 +257,8 @@ const ChatInterface = ({
           onKeyDown={(e) => e.key === "Enter" && !isLoading && handleSubmit()}
         />
         <button
-          className={`ml-2 rounded-full ${isLoading ? "bg-neutral-500" : "bg-pink-700"} px-8 py-3 font-bold text-white transition hover:${isLoading ? "bg-neutral-500" : "bg-pink-800"}`}
+          className={`ml-2 rounded-full ${isLoading ? "bg-neutral-500" : "bg-pink-700"} px-8 py-3 font-bold text-white transition ${isLoading ? "hover:bg-neutral-500" : "hover:bg-pink-800"}`}
+          // NOTE: Factoring out "hover:" doesn't work (Tailwinddoesn't detect class name?)
           onClick={handleSubmit}
           disabled={isLoading}
         >
@@ -238,6 +276,7 @@ const ChatInterface = ({
           name="files"
           className="w-auto cursor-pointer"
           multiple
+          disabled={isLoading}
           ref={uploaderRef}
         />
       </div>

@@ -13,7 +13,7 @@ interface TitlePageProps {
 const TitlePage = (props: TitlePageProps) => {
   return (
     <div className="max-w-2xl pb-12 text-center">
-      <h1 className="mb-12 animate-slide-up-fade text-4xl font-bold text-slate-300 sm:text-5xl">
+      <h1 className="animate-slide-up-fade mb-12 text-4xl font-bold text-slate-300 sm:text-5xl">
         Doc<span className=" text-pink-600">Doc</span>Go Test Interface
       </h1>
       <div className="w-full">
