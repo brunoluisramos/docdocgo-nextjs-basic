@@ -1,9 +1,10 @@
 // components/ChatInterface.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { use, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, FullMessage } from "~/types";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { set } from "zod";
 
 interface ChatInterfaceProps {
   apiUrl: string;
@@ -15,9 +16,10 @@ interface RequestData {
   message: string;
   api_key: string;
   chat_history: Message[];
+  collection_name: string;
   openai_api_key?: string;
-  collection_name?: string;
   access_codes_cache?: Record<string, string>;
+  scheduled_queries_str?: string;
 }
 
 const InstructionType = {
@@ -36,7 +38,8 @@ interface APIResponse {
   collection_name: string | null;
   user_facing_collection_name: string | null;
   sources: string[] | null;
-  instruction: Instruction | null;
+  instructions: Instruction[] | null;
+  scheduled_queries_str: string | null;
 }
 
 interface CollectionInfo {
@@ -64,6 +67,10 @@ const ChatInterface = ({
 
   const [message, setMessage] = useState<string>("");
   const [chatHistory, setChatHistory] = useState<FullMessage[]>([]);
+  const [scheduledQueriesStr, setScheduledQueriesStr] = useState<string | null>(
+    null,
+  );
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [collection, setCollection] = useState<CollectionInfo>({
@@ -73,7 +80,9 @@ const ChatInterface = ({
   const lastChatRef = useRef<HTMLDivElement | null>(null);
   const uploaderRef = useRef<HTMLInputElement | null>(null);
   const accessCodesRef = useRef<Record<string, Record<string, string>>>({});
-  // NOTE: keys are `${collection_name} ${user_id}, values are access_code
+  // userId: { collectionName: accessCode }
+
+  const isBusy = isLoading || !!scheduledQueriesStr;
 
   function getAccessCode(collectionName: string, userId: UserId) {
     const collectionNameToCode = accessCodesRef.current[userId ?? ""] ?? {};
@@ -85,7 +94,7 @@ const ChatInterface = ({
     accessCode: string,
   ) {
     console.log("Caching access code:", collectionName, userId, accessCode);
-    const collectionNameToCode = accessCodesRef.current[userId ?? ""] 
+    const collectionNameToCode = accessCodesRef.current[userId ?? ""];
     if (collectionNameToCode) {
       collectionNameToCode[collectionName] = accessCode;
     } else {
@@ -95,11 +104,20 @@ const ChatInterface = ({
 
   const userId = getUserId(openaiApiKey);
 
+  // Run after every render to check for scheduled queries
+  useEffect(() => {
+    if (!scheduledQueriesStr || isLoading) return;
+    async function runScheduledQueries() {
+      await handleSubmit("AUTO-INSTRUCTION: Run scheduled query.");
+    }
+    runScheduledQueries();
+  });
+
   useEffect(() => {
     lastChatRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory, error]);
 
-  async function handleSubmit() {
+  async function handleSubmit(messageToSubmit: string = message) {
     const newMessage: FullMessage = { role: "user", content: message };
     setChatHistory((prev) => [...prev, newMessage]);
     setIsLoading(true);
@@ -113,6 +131,7 @@ const ChatInterface = ({
       chat_history: getChatHistoryForAPI(chatHistory),
       collection_name: collection.name,
       access_codes_cache: accessCodesRef.current[userId ?? ""],
+      scheduled_queries_str: scheduledQueriesStr ?? undefined,
     };
 
     // Check if the user has selected any files. If not, send request to /chat
@@ -183,15 +202,18 @@ const ChatInterface = ({
       }
       setChatHistory((prev) => [...prev, botMessage]);
 
-      if (data.instruction) {
-        const { type, user_id, access_code } = data.instruction; // from Python response
+      for (const instruction of data.instructions ?? []) {
+        const { type, user_id, access_code } = instruction;
+
         if (type === InstructionType.INSTRUCT_CACHE_ACCESS_CODE) {
           // Cache the access code for this collection and user
+          // (collection_name and access_code are non-null for this instruction type)
           setAccessCode(data.collection_name!, user_id, access_code!);
+
+          // The returned user_id should match userId (both constructed from openaiApiKey)
+          if (user_id !== userId)
+            setError(`User ID mismatch: ${user_id} !== ${userId}`);
         }
-        // The returned user_id should match userId (both constructed from openaiApiKey)
-        if (user_id !== userId)
-          setError(`User ID mismatch: ${user_id} !== ${userId}`);
       }
 
       if (data.collection_name && data.user_facing_collection_name) {
@@ -200,17 +222,19 @@ const ChatInterface = ({
           user_facing_name: data.user_facing_collection_name,
         });
       }
+
+      setScheduledQueriesStr(data.scheduled_queries_str);
     } catch (error) {
       console.error("Error getting response:", error);
       const msg = error instanceof Error ? error.message : String(error);
       setError(`Error getting response:\n\`\`\`\n${msg}\n\`\`\``);
     }
-    setIsLoading(false);
+    setIsLoading(false); // so it can send another message
   };
 
   return (
     <div className="flex h-full w-full max-w-4xl flex-col items-center justify-center gap-4">
-      <div className="chatBox scrollbar-thumb-rounded-full scrollbar scrollbar-track-transparent scrollbar-thumb-slate-700 flex h-full w-full flex-col overflow-y-auto overflow-x-hidden rounded-lg px-4 ">
+      <div className="chatBox scrollbar-thumb-rounded-full flex h-full w-full flex-col overflow-y-auto overflow-x-hidden rounded-lg px-4 scrollbar scrollbar-track-transparent scrollbar-thumb-slate-700 ">
         {chatHistory.map((chat, index) => (
           <div
             key={`chatmsg-${index}`}
@@ -220,7 +244,6 @@ const ChatInterface = ({
             <div className="font-bold text-pink-600 ">
               {chat.role === "user" ? "You:" : "DDG:"}
             </div>
-            {/* https://stackoverflow.com/questions/75706164/problem-with-tailwind-css-when-using-the-react-markdown-component */}
             <ReactMarkdown className="prose prose-pink prose-invert">
               {chat.content}
             </ReactMarkdown>
@@ -246,21 +269,21 @@ const ChatInterface = ({
         <input
           type="text"
           placeholder={
-            isLoading
+            isBusy
               ? "Awaiting response..."
               : `Collection: ${collection.user_facing_name}`
           }
           className="w-full rounded-lg bg-slate-800 px-4 py-2"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          disabled={isLoading}
-          onKeyDown={(e) => e.key === "Enter" && !isLoading && handleSubmit()}
+          disabled={isBusy}
+          onKeyDown={(e) => e.key === "Enter" && !isBusy && handleSubmit()}
         />
         <button
-          className={`ml-2 rounded-full ${isLoading ? "bg-neutral-500" : "bg-pink-700"} px-8 py-3 font-bold text-white transition ${isLoading ? "hover:bg-neutral-500" : "hover:bg-pink-800"}`}
+          className={`ml-2 rounded-full ${isBusy ? "bg-neutral-500" : "bg-pink-700"} px-8 py-3 font-bold text-white transition ${isBusy ? "hover:bg-neutral-500" : "hover:bg-pink-800"}`}
           // NOTE: Factoring out "hover:" doesn't work (Tailwinddoesn't detect class name?)
-          onClick={handleSubmit}
-          disabled={isLoading}
+          onClick={()=>handleSubmit()}
+          disabled={isBusy}
         >
           Send
         </button>
@@ -276,7 +299,7 @@ const ChatInterface = ({
           name="files"
           className="w-auto cursor-pointer"
           multiple
-          disabled={isLoading}
+          disabled={isBusy}
           ref={uploaderRef}
         />
       </div>
