@@ -110,7 +110,7 @@ const ChatInterface = ({
     async function runScheduledQueries() {
       await handleSubmit("AUTO-INSTRUCTION: Run scheduled query.");
     }
-    runScheduledQueries();
+    void runScheduledQueries();
   });
 
   useEffect(() => {
