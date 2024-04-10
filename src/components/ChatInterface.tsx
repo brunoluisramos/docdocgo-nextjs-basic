@@ -1,10 +1,9 @@
 // components/ChatInterface.tsx
-import React, { use, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, FullMessage } from "~/types";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { set } from "zod";
 
 interface ChatInterfaceProps {
   apiUrl: string;
@@ -50,7 +49,11 @@ interface CollectionInfo {
 type UserId = string | null;
 
 function getChatHistoryForAPI(fullMessages: FullMessage[]): Message[] {
-  return fullMessages.map(({ role, content }) => ({ role, content }));
+  // Convert "system" role to "user" role for the API, remove sources
+  return fullMessages.map(({ role, content }) => ({
+    role: role === "system" ? "user" : role,
+    content,
+  }));
 }
 
 const PRIVATE_COLLECTION_USER_ID_LENGTH = 6; // same as in the Python code
@@ -65,7 +68,7 @@ const ChatInterface = ({
 }: ChatInterfaceProps) => {
   apiUrl = apiUrl.replace(/\/$/, ""); // remove trailing slash if present
 
-  const [message, setMessage] = useState<string>("");
+  const [messageText, setMessage] = useState<string>("");
   const [chatHistory, setChatHistory] = useState<FullMessage[]>([]);
   const [scheduledQueriesStr, setScheduledQueriesStr] = useState<string | null>(
     null,
@@ -117,15 +120,27 @@ const ChatInterface = ({
     lastChatRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory, error]);
 
-  async function handleSubmit(messageToSubmit: string = message) {
-    const newMessage: FullMessage = { role: "user", content: message };
-    setChatHistory((prev) => [...prev, newMessage]);
+  async function handleSubmit(systemMessageText: string | null = null) {
+    const newMessage: FullMessage = { role: "user", content: messageText };
+    if (systemMessageText) {
+      // If there is a system message, add it before/in place of the user message
+      const systemMessage: FullMessage = {
+        role: "system",
+        content: systemMessageText,
+      };
+      if (messageText) setChatHistory((x) => [...x, systemMessage, newMessage]);
+      else setChatHistory((x) => [...x, systemMessage]); // normally should happen
+    } else {
+      // Otherwise, just add the user message
+      setChatHistory((x) => [...x, newMessage]);
+    }
+    
     setIsLoading(true);
     setError(null);
     setMessage(""); // clear input field
 
     const requestData: RequestData = {
-      message,
+      message: messageText,
       api_key: apiKey,
       openai_api_key: openaiApiKey,
       chat_history: getChatHistoryForAPI(chatHistory),
@@ -242,7 +257,11 @@ const ChatInterface = ({
             className={"mb-8"}
           >
             <div className="font-bold text-pink-600 ">
-              {chat.role === "user" ? "You:" : "DDG:"}
+              {chat.role === "user"
+                ? "You:"
+                : chat.role === "assistant"
+                  ? "DDG:"
+                  : "System:"}
             </div>
             <ReactMarkdown className="prose prose-pink prose-invert">
               {chat.content}
@@ -274,7 +293,7 @@ const ChatInterface = ({
               : `Collection: ${collection.user_facing_name}`
           }
           className="w-full rounded-lg bg-slate-800 px-4 py-2"
-          value={message}
+          value={messageText}
           onChange={(e) => setMessage(e.target.value)}
           disabled={isBusy}
           onKeyDown={(e) => e.key === "Enter" && !isBusy && handleSubmit()}
@@ -282,7 +301,7 @@ const ChatInterface = ({
         <button
           className={`ml-2 rounded-full ${isBusy ? "bg-neutral-500" : "bg-pink-700"} px-8 py-3 font-bold text-white transition ${isBusy ? "hover:bg-neutral-500" : "hover:bg-pink-800"}`}
           // NOTE: Factoring out "hover:" doesn't work (Tailwinddoesn't detect class name?)
-          onClick={()=>handleSubmit()}
+          onClick={() => handleSubmit()}
           disabled={isBusy}
         >
           Send
