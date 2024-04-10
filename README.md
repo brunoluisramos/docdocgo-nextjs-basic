@@ -1,29 +1,39 @@
-# Create T3 App
+# Next.js Frontend for DocDocGo FastAPI Backend
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+This frontend can serve as a reference implementation for how to interact with the DocDocGo API. It can also be used to test the API.
 
-## What's next? How do I make an app with this?
+## Getting Started
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+### 1. Start the backend server
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+See the instructions in the [backend README](https://github.com/reasonmethis/docdocgo-core/?tab=readme-ov-file#installation) to start the backend server.
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+### 2. Clone the repository and install dependencies
 
-## Learn More
+Use your favorite way to clone the repository and cd into the directory. Then install the dependencies:
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+```bash
+npm install
+```
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+### 3. Configure the environment variables
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+Copy the `.env.example` file to `.env` and fill in the values as described in the file.
 
-## How do I deploy this?
+### 4. Start the development server
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+```bash
+npm run dev
+```
+
+### 4. Open the app
+
+Open [http://localhost:3000](http://localhost:3000) with your browser. Double check that the app shows the correct backend URL on the home page. If not, then you can manually change the URL in the input field.
+
+Optionally fill in the other fields and click the "Start Chat" button.
+
+To test the connection to the backend without sending a request to the LLM, you can enter the command:
+
+```bash
+/help
+```
