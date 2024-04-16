@@ -6,7 +6,7 @@ import TitlePage from "../components/TitlePage";
 import ChatInterface from "../components/ChatInterface";
 
 export default function HomePage() {
-  const [apiUrl, setApiUrl] = useState("http://localhost:8000");
+  const [apiUrl, setApiUrl] = useState(env.NEXT_PUBLIC_DEFAULT_API_URL);
   const [apiKey, setApiKey] = useState(env.NEXT_PUBLIC_DOCDOCGO_API_KEY);
   const [openaiApiKey, setOpenaiApiKey] = useState<string>();
 
