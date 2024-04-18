@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import type { Message, FullMessage, BotSettings } from "~/types";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Settings } from "~/components/Settings";
 import { env } from "~/env";
 
 interface ChatInterfaceProps {
@@ -83,8 +84,10 @@ const ChatInterface = ({
     user_facing_name: "default",
   });
 
-  const [llmModelName, setLlmModelName] = useState<string>(env.NEXT_PUBLIC_DEFAULT_MODEL_NAME)
-  const [llmTemperature, setLlmTemperature] = useState<number>(env.NEXT_PUBLIC_DEFAULT_TEMPERATURE)
+  const [botSettings, setBotSettings] = useState<BotSettings>({
+    llm_model_name: env.NEXT_PUBLIC_DEFAULT_MODEL_NAME,
+    temperature: env.NEXT_PUBLIC_DEFAULT_TEMPERATURE,
+  });
 
   const lastChatRef = useRef<HTMLDivElement | null>(null);
   const uploaderRef = useRef<HTMLInputElement | null>(null);
@@ -140,7 +143,7 @@ const ChatInterface = ({
       // Otherwise, just add the user message
       setChatHistory((x) => [...x, newMessage]);
     }
-    
+
     setIsLoading(true);
     setError(null);
     setMessage(""); // clear input field
@@ -153,10 +156,7 @@ const ChatInterface = ({
       collection_name: collection.name,
       access_codes_cache: accessCodesRef.current[userId ?? ""],
       scheduled_queries_str: scheduledQueriesStr ?? undefined,
-      bot_settings: {
-        llm_model_name: llmModelName,
-        temperature: llmTemperature,
-      },
+      bot_settings: botSettings,
     };
 
     // Check if the user has selected any files. If not, send request to /chat
@@ -331,6 +331,7 @@ const ChatInterface = ({
           disabled={isBusy}
           ref={uploaderRef}
         />
+        <Settings botSettings={botSettings} setBotSettings={setBotSettings} />
       </div>
     </div>
   );
