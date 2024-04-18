@@ -49,7 +49,7 @@ export function Settings({ botSettings, setBotSettings }: SettingsProps) {
         <DialogHeader>
           <DialogTitle>Change settings</DialogTitle>
           <DialogDescription>
-            Note: you can't customize your settings if you are using the
+            Note: you can&apos;t customize your settings if you are using the
             community OpenAI API key.
           </DialogDescription>
         </DialogHeader>
