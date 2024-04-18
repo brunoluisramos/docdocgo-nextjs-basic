@@ -18,6 +18,8 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_DOCDOCGO_API_KEY: z.string(),
     NEXT_PUBLIC_DEFAULT_API_URL: z.string(),
+    NEXT_PUBLIC_DEFAULT_MODEL_NAME: z.string(),
+    NEXT_PUBLIC_DEFAULT_TEMPERATURE: z.number(),
   },
 
   /**
@@ -28,6 +30,9 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_DOCDOCGO_API_KEY: process.env.NEXT_PUBLIC_DOCDOCGO_API_KEY,
     NEXT_PUBLIC_DEFAULT_API_URL: process.env.NEXT_PUBLIC_DEFAULT_API_URL,
+    NEXT_PUBLIC_DEFAULT_MODEL_NAME: process.env.NEXT_PUBLIC_DEFAULT_MODEL_NAME,
+    NEXT_PUBLIC_DEFAULT_TEMPERATURE:
+      Number(process.env.NEXT_PUBLIC_DEFAULT_TEMPERATURE),
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

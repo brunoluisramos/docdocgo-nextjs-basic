@@ -1,9 +1,10 @@
 // components/ChatInterface.tsx
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import type { Message, FullMessage } from "~/types";
+import type { Message, FullMessage, BotSettings } from "~/types";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { env } from "~/env";
 
 interface ChatInterfaceProps {
   apiUrl: string;
@@ -19,6 +20,7 @@ interface RequestData {
   openai_api_key?: string;
   access_codes_cache?: Record<string, string>;
   scheduled_queries_str?: string;
+  bot_settings?: BotSettings;
 }
 
 const InstructionType = {
@@ -80,6 +82,10 @@ const ChatInterface = ({
     name: "",
     user_facing_name: "default",
   });
+
+  const [llmModelName, setLlmModelName] = useState<string>(env.NEXT_PUBLIC_DEFAULT_MODEL_NAME)
+  const [llmTemperature, setLlmTemperature] = useState<number>(env.NEXT_PUBLIC_DEFAULT_TEMPERATURE)
+
   const lastChatRef = useRef<HTMLDivElement | null>(null);
   const uploaderRef = useRef<HTMLInputElement | null>(null);
   const accessCodesRef = useRef<Record<string, Record<string, string>>>({});
@@ -147,6 +153,10 @@ const ChatInterface = ({
       collection_name: collection.name,
       access_codes_cache: accessCodesRef.current[userId ?? ""],
       scheduled_queries_str: scheduledQueriesStr ?? undefined,
+      bot_settings: {
+        llm_model_name: llmModelName,
+        temperature: llmTemperature,
+      },
     };
 
     // Check if the user has selected any files. If not, send request to /chat
