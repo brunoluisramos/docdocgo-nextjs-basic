@@ -45,7 +45,7 @@ export function Settings({ botSettings, setBotSettings }: SettingsProps) {
           <SettingsIcon className="mr-2 h-4 w-4" /> Settings
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="dark bg-slate-900 text-slate-200  sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Change settings</DialogTitle>
           <DialogDescription>
@@ -64,7 +64,7 @@ export function Settings({ botSettings, setBotSettings }: SettingsProps) {
             <SelectTrigger className="mb-4 w-[70%]">
               <SelectValue placeholder="Select model" />
             </SelectTrigger>
-            <SelectContent id="model-name">
+            <SelectContent className="dark" id="model-name">
               {ALLOWED_MODELS.map((model) => (
                 <SelectItem key={model} value={model}>
                   {model}
