@@ -26,7 +26,7 @@ Copy the `.env.example` file to `.env` and fill in the values as described in th
 npm run dev
 ```
 
-### 4. Open the app
+### 5. Open the app
 
 Open [http://localhost:3000](http://localhost:3000) with your browser. Double check that the app shows the correct backend URL on the home page. If not, then you can manually change the URL in the input field.
 
