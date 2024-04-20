@@ -20,7 +20,7 @@ interface RequestData {
   collection_name: string;
   openai_api_key?: string;
   access_codes_cache?: Record<string, string>;
-  scheduled_queries_str?: string;
+  agentic_flow_state_str?: string;
   bot_settings?: BotSettings;
 }
 
@@ -41,7 +41,7 @@ interface APIResponse {
   user_facing_collection_name: string | null;
   sources: string[] | null;
   instructions: Instruction[] | null;
-  scheduled_queries_str: string | null;
+  agentic_flow_state_str: string | null;
 }
 
 interface CollectionInfo {
@@ -73,9 +73,9 @@ const ChatInterface = ({
 
   const [messageText, setMessage] = useState<string>("");
   const [chatHistory, setChatHistory] = useState<FullMessage[]>([]);
-  const [scheduledQueriesStr, setScheduledQueriesStr] = useState<string | null>(
-    null,
-  );
+  const [stringifiedAgenticState, setStringifiedAgenticState] = useState<
+    string | null
+  >(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +94,7 @@ const ChatInterface = ({
   const accessCodesRef = useRef<Record<string, Record<string, string>>>({});
   // userId: { collectionName: accessCode }
 
-  const isBusy = isLoading || !!scheduledQueriesStr;
+  const isBusy = isLoading || !!stringifiedAgenticState;
 
   function getAccessCode(collectionName: string, userId: UserId) {
     const collectionNameToCode = accessCodesRef.current[userId ?? ""] ?? {};
@@ -118,7 +118,7 @@ const ChatInterface = ({
 
   // Run after every render to check for scheduled queries
   useEffect(() => {
-    if (!scheduledQueriesStr || isLoading) return;
+    if (!stringifiedAgenticState || isLoading) return;
     async function runScheduledQueries() {
       await handleSubmit("AUTO-INSTRUCTION: Run scheduled query.");
     }
@@ -155,7 +155,7 @@ const ChatInterface = ({
       chat_history: getChatHistoryForAPI(chatHistory),
       collection_name: collection.name,
       access_codes_cache: accessCodesRef.current[userId ?? ""],
-      scheduled_queries_str: scheduledQueriesStr ?? undefined,
+      agentic_flow_state_str: stringifiedAgenticState ?? undefined,
       bot_settings: botSettings,
     };
 
@@ -248,7 +248,7 @@ const ChatInterface = ({
         });
       }
 
-      setScheduledQueriesStr(data.scheduled_queries_str);
+      setStringifiedAgenticState(data.agentic_flow_state_str);
     } catch (error) {
       console.error("Error getting response:", error);
       const msg = error instanceof Error ? error.message : String(error);
