@@ -27,6 +27,7 @@ interface RequestData {
 const InstructionType = {
   INSTRUCT_SHOW_UPLOADER: "INSTRUCT_SHOW_UPLOADER",
   INSTRUCT_CACHE_ACCESS_CODE: "INSTRUCT_CACHE_ACCESS_CODE",
+  INSTRUCT_AUTO_RUN_NEXT_QUERY: "INSTRUCT_AUTO_RUN_NEXT_QUERY",
 } as const;
 
 interface Instruction {
@@ -76,6 +77,8 @@ const ChatInterface = ({
   const [stringifiedAgenticState, setStringifiedAgenticState] = useState<
     string | null
   >(null);
+  const [areMoreQueriesToRun, setAreMoreQueriesToRun] =
+    useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +97,7 @@ const ChatInterface = ({
   const accessCodesRef = useRef<Record<string, Record<string, string>>>({});
   // userId: { collectionName: accessCode }
 
-  const isBusy = isLoading || !!stringifiedAgenticState;
+  const isBusy = isLoading || areMoreQueriesToRun;
 
   function getAccessCode(collectionName: string, userId: UserId) {
     const collectionNameToCode = accessCodesRef.current[userId ?? ""] ?? {};
@@ -118,7 +121,7 @@ const ChatInterface = ({
 
   // Run after every render to check for scheduled queries
   useEffect(() => {
-    if (!stringifiedAgenticState || isLoading) return;
+    if (!areMoreQueriesToRun || isLoading) return;
     async function runScheduledQueries() {
       await handleSubmit("AUTO-INSTRUCTION: Run scheduled query.");
     }
@@ -227,10 +230,14 @@ const ChatInterface = ({
       }
       setChatHistory((prev) => [...prev, botMessage]);
 
+      // Process instructions
+      let _areMoreQueriesToRun = false;
       for (const instruction of data.instructions ?? []) {
         const { type, user_id, access_code } = instruction;
 
-        if (type === InstructionType.INSTRUCT_CACHE_ACCESS_CODE) {
+        if (type === InstructionType.INSTRUCT_AUTO_RUN_NEXT_QUERY) {
+          _areMoreQueriesToRun = true;
+        } else if (type === InstructionType.INSTRUCT_CACHE_ACCESS_CODE) {
           // Cache the access code for this collection and user
           // (collection_name and access_code are non-null for this instruction type)
           setAccessCode(data.collection_name!, user_id, access_code!);
@@ -241,6 +248,7 @@ const ChatInterface = ({
         }
       }
 
+      // Update state
       if (data.collection_name && data.user_facing_collection_name) {
         setCollection({
           name: data.collection_name,
@@ -249,6 +257,7 @@ const ChatInterface = ({
       }
 
       setStringifiedAgenticState(data.agentic_flow_state_str);
+      setAreMoreQueriesToRun(_areMoreQueriesToRun);
     } catch (error) {
       console.error("Error getting response:", error);
       const msg = error instanceof Error ? error.message : String(error);
