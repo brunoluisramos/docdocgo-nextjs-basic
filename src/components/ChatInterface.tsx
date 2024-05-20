@@ -167,6 +167,9 @@ const ChatInterface = ({
     if (!fileCount) {
       // Send regular chat message, in JSON format
       const payload = JSON.stringify(requestData);
+
+      console.log(requestData);
+
       return await sendRequest(payload, "/chat");
     }
 
